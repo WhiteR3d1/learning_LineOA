@@ -110,6 +110,20 @@
     });
   }
 
+  /** จำกัดเวลารอ promise ถ้าเกินกำหนดให้ถือว่าล้มเหลว จะได้ไม่ค้างรอไปเรื่อย ๆ */
+  function withTimeout(promise, ms, message) {
+    let timer;
+    return Promise.race([
+      Promise.resolve(promise).then(
+        (v) => { clearTimeout(timer); return v; },
+        (e) => { clearTimeout(timer); throw e; }
+      ),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), ms);
+      })
+    ]);
+  }
+
   /* ============================================================
    *  ขั้นตอนเข้าสู่ระบบ
    * ============================================================ */
