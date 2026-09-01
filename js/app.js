@@ -236,6 +236,14 @@
 
     $('#pfPicture').src = u.pictureUrl || DEFAULT_AVATAR;
     $('#pfPicture').onerror = function () { this.src = DEFAULT_AVATAR; };
+
+    // รูปโปรไฟล์เล็กท้ายแถบเมนูด้านซ้าย
+    const side = $('#sideAvatar');
+    if (side) {
+      side.src = u.pictureUrl || DEFAULT_AVATAR;
+      side.title = u.displayName;
+      side.onerror = function () { this.src = DEFAULT_AVATAR; };
+    }
     $('#pfName').textContent = u.displayName;
     $('#pfPoints').textContent = fmt(u.totalPoints);
     $('#pfLevelBadge').innerHTML = '<i class="fa-solid ' + lv.icon + '"></i> Lv.' + lv.level;
@@ -299,8 +307,8 @@
     // กราฟเส้น : คะแนนย้อนหลัง 7 วัน
     const ctx1 = $('#chartPoints').getContext('2d');
     const grad = ctx1.createLinearGradient(0, 0, 0, 230);
-    grad.addColorStop(0, 'rgba(123,61,255,.35)');
-    grad.addColorStop(1, 'rgba(123,61,255,0)');
+    grad.addColorStop(0, 'rgba(17,18,20,.14)');
+    grad.addColorStop(1, 'rgba(17,18,20,0)');
 
     if (state.charts.points) state.charts.points.destroy();
     state.charts.points = new Chart(ctx1, {
@@ -310,10 +318,10 @@
         datasets: [{
           label: 'คะแนนที่ได้รับ',
           data: c.pointSeries,
-          borderColor: '#7b3dff',
+          borderColor: '#111214',
           backgroundColor: grad,
           borderWidth: 3, tension: .4, fill: true,
-          pointBackgroundColor: '#fff', pointBorderColor: '#7b3dff',
+          pointBackgroundColor: '#fff', pointBorderColor: '#111214',
           pointBorderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6
         }]
       },
@@ -337,7 +345,7 @@
         datasets: [{
           label: 'คะแนนดีที่สุด (%)',
           data: c.categoryValues,
-          backgroundColor: c.categoryColors.map((x) => x + 'cc'),
+          backgroundColor: '#111214',
           borderRadius: 8, borderSkipped: false, barThickness: 12
         }]
       },
@@ -428,8 +436,8 @@
       await Swal.fire({
         icon: 'success',
         title: 'เช็คอินสำเร็จ',
-        html: `<div style="font-size:32px;font-weight:700;color:#7b3dff;margin:6px 0">+${res.points} คะแนน</div>
-               <div style="font-size:13px;color:#5c5c85">พื้นฐาน ${res.base} คะแนน + โบนัสต่อเนื่อง ${res.bonus} คะแนน</div>
+        html: `<div style="font-size:32px;font-weight:700;color:#111214;margin:6px 0">+${res.points} คะแนน</div>
+               <div style="font-size:13px;color:#6f7278">พื้นฐาน ${res.base} คะแนน + โบนัสต่อเนื่อง ${res.bonus} คะแนน</div>
                <div style="margin-top:10px;font-size:14px"><i class="fa-solid fa-fire" style="color:#ff7a3d"></i>
                เช็คอินต่อเนื่อง <b>${res.streak}</b> วัน</div>`,
         confirmButtonText: 'เยี่ยมมาก'
@@ -449,7 +457,7 @@
     $('#lessonGrid').innerHTML = state.lessons.map((l) => `
       <div class="item-card" data-lesson="${l.lessonId}">
         <div class="ic-top">
-          <div class="ic-icon" style="background:linear-gradient(135deg,${l.color},${shade(l.color)})">
+          <div class="ic-icon">
             <i class="fa-solid ${l.icon}"></i>
           </div>
           <div>
@@ -528,7 +536,7 @@
       return `
       <div class="item-card" data-cat="${c.categoryId}">
         <div class="ic-top">
-          <div class="ic-icon" style="background:linear-gradient(135deg,${c.color},${shade(c.color)})">
+          <div class="ic-icon">
             <i class="fa-solid ${c.icon}"></i>
           </div>
           <div>
@@ -740,9 +748,9 @@
     $('#resTime').textContent = mmss(timeUsed);
 
     const deg = Math.round(res.percent * 3.6);
-    const color = res.percent >= 80 ? '#22c58b' : (res.percent >= 50 ? '#7b3dff' : '#ef5350');
+    const color = res.passed ? '#111214' : '#a6a9af';
     $('.res-ring').style.background =
-      `conic-gradient(${color} 0deg, ${color} ${deg}deg, #eeecfb ${deg}deg)`;
+      `conic-gradient(${color} 0deg, ${color} ${deg}deg, #e7e7ea ${deg}deg)`;
     $('#resPercent').style.color = color;
 
     let title, sub;
@@ -798,8 +806,7 @@
     $('#badgeGrid').innerHTML = b.badges.map((x) => `
       <div class="badge-card ${x.earned ? '' : 'locked'}">
         ${x.earned ? '<span class="bc-earned"><i class="fa-solid fa-check"></i></span>' : ''}
-        <div class="badge-medal" style="background:linear-gradient(135deg,${x.color},${shade(x.color)});
-             box-shadow:0 8px 20px ${x.color}55">
+        <div class="badge-medal">
           <i class="fa-solid ${x.earned ? x.icon : 'fa-lock'}"></i>
         </div>
         <p class="bc-name">${esc(x.name)}</p>
@@ -816,11 +823,11 @@
     for (const b of list) {
       await Swal.fire({
         title: 'ปลดล็อกเหรียญใหม่',
-        html: `<div class="badge-pop" style="background:linear-gradient(135deg,${b.color},${shade(b.color)})">
+        html: `<div class="badge-pop">
                  <i class="fa-solid ${b.icon}"></i></div>
                <div style="font-size:18px;font-weight:600;color:#1b1b3a">${esc(b.name)}</div>
-               <div style="font-size:13px;color:#5c5c85;margin-top:5px">${esc(b.description)}</div>
-               <div style="margin-top:10px;font-size:15px;color:#7b3dff;font-weight:600">+${b.points} คะแนน</div>`,
+               <div style="font-size:13px;color:#6f7278;margin-top:5px">${esc(b.description)}</div>
+               <div style="margin-top:10px;font-size:15px;color:#111214;font-weight:600">+${b.points} คะแนน</div>`,
         confirmButtonText: 'เยี่ยม'
       });
     }
@@ -931,18 +938,6 @@
     return 'วัน' + TH_DAY[d.getDay()] + 'ที่ ' + d.getDate() + ' ' +
       TH_MONTH[d.getMonth()] + ' ' + (d.getFullYear() + 543);
   }
-  /** ทำสีให้เข้มขึ้นเล็กน้อย สำหรับไล่เฉดในไอคอน */
-  function shade(hex) {
-    try {
-      const c = String(hex).replace('#', '');
-      const n = parseInt(c.length === 3 ? c.split('').map((x) => x + x).join('') : c, 16);
-      const r = Math.max(0, ((n >> 16) & 255) - 45);
-      const g = Math.max(0, ((n >> 8) & 255) - 45);
-      const b = Math.max(0, (n & 255) - 20);
-      return 'rgb(' + r + ',' + g + ',' + b + ')';
-    } catch (e) { return hex; }
-  }
-
   /* ============================================================
    *  ผูกเหตุการณ์ต่าง ๆ
    * ============================================================ */
