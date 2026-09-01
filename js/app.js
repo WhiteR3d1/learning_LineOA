@@ -8,8 +8,8 @@
    *            (Scope ต้องมี profile และ openid)
    *  API_URL : Apps Script > Deploy > Web app (ลงท้ายด้วย /exec)
    * ============================================================ */
-  const LIFF_ID = 'ใส่_LIFF_ID';
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxoZTUsgGdNDRf62_UtKGrON58lMo6TDFYeSoxg-NHNbMrbWt_ENfF1w11yKhfNE7EHuw/exec';
+  const LIFF_ID = '2011368839-uVoKq11X';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwInv__4qMsE4tP68H9MwYrg2VMgygihf9vLWE1PoJrbkH503sYAoiJcRnk8Kgpy097vg/exec';
 
   /* ============================================================
    *  สถานะของแอป
