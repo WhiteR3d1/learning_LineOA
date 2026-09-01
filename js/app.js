@@ -140,12 +140,8 @@
     try {
       await liff.init({ liffId: LIFF_ID });
     } catch (e) {
-      return showLogin('เริ่มต้น LIFF ไม่สำเร็จ: ' + (e.message || e) + '\n\n' +
-        'สิ่งที่ต้องตรวจสอบ\n' +
-        '1. ถ้าเปิดจาก Rich Menu ลิงก์ต้องเป็น https://liff.line.me/{LIFF_ID} ไม่ใช่ URL ของเว็บโดยตรง\n' +
-        '2. LIFF_ID ในไฟล์ js/app.js ตรงกับใน LINE Developers\n' +
-        '3. Endpoint URL ของ LIFF App ตรงกับที่อยู่ของหน้านี้\n' +
-        '4. LINE Login Channel อยู่ในสถานะ Published');
+      return showLogin('เริ่มต้น LIFF ไม่สำเร็จ: ' + (e.message || e) +
+        '\nตรวจสอบว่า LIFF_ID ถูกต้อง และ Endpoint URL ตรงกับที่อยู่ของหน้านี้');
     }
 
     // ยังไม่ได้เข้าสู่ระบบ พาไป login ทันที
