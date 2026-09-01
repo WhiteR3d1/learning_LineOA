@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+   HTML5 Quest - เว็บแอปทบทวนบทเรียนและตอบคำถาม
+   วิชา  : พื้นฐานการสร้างเว็บไซต์ (21909-1006)
+   เรื่อง : ออกแบบและสร้างเว็บไซต์ด้วยโปรแกรมภาษา HTML5
+  ============================================================
+
+   สิ่งที่ต้องเติมก่อนใช้งาน : เปิดไฟล์ js/app.js แล้วแก้ 2 บรรทัดบนสุด
+     1. LIFF_ID  → LINE Developers > LINE Login channel > แท็บ LIFF
+     2. API_URL  → Web App URL จาก Apps Script (ลงท้ายด้วย /exec)
+
+   ลำดับการติดตั้ง
+     1. ตั้งค่าฝั่ง Apps Script ให้เสร็จก่อน (ดู README.md)
+     2. สร้าง LIFF App ใน LINE Login channel
+        Size: Full / Scope: profile + openid / Endpoint URL = URL บน Vercel
+     3. เติมค่า 2 จุดใน js/app.js
+     4. อัปโหลดโฟลเดอร์ web/ ขึ้น Vercel
+     5. เปิดใช้งานผ่าน https://liff.line.me/{LIFF_ID} (ผูกกับ Rich Menu ของ LINE OA)
+
+   หมายเหตุ : ห้าม host หน้านี้บน Google Apps Script โดยตรง
+              เพราะ LIFF login จะถูกบล็อกใน iframe ของ GAS
+  ============================================================
+-->
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="เว็บแอปทบทวนบทเรียนและแบบทดสอบ เรื่อง ออกแบบและสร้างเว็บไซต์ด้วยโปรแกรมภาษา HTML5">
+  <title>HTML5 Quest | ทบทวนบทเรียน HTML5</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+  <link href="css/style.css" rel="stylesheet">
+</head>
+
+<body>
+
+<!-- ==================== หน้าจอกำลังโหลด ==================== -->
+<div id="splash" class="splash">
+  <div class="splash-inner">
+    <div class="splash-logo"><i class="fa-brands fa-html5"></i></div>
+    <h1 class="splash-title">HTML5 Quest</h1>
+    <p class="splash-sub">ทบทวนบทเรียน ออกแบบและสร้างเว็บไซต์ด้วยภาษา HTML5</p>
+    <div class="splash-bar"><span></span></div>
+    <p id="splashMsg" class="splash-msg">กำลังเตรียมระบบ...</p>
+  </div>
+</div>
+
+<!-- ==================== หน้าเข้าสู่ระบบ ==================== -->
+<div id="loginScreen" class="login-screen d-none">
+  <div class="login-card">
+    <div class="login-logo"><i class="fa-brands fa-html5"></i></div>
+    <h1>HTML5 Quest</h1>
+    <p class="login-sub">พื้นฐานการสร้างเว็บไซต์ (21909-1006)<br>ออกแบบและสร้างเว็บไซต์ด้วยโปรแกรมภาษา HTML5</p>
+    <div id="loginError" class="login-error d-none"></div>
+    <button id="btnLogin" class="btn-line">
+      <i class="fa-brands fa-line"></i> เข้าสู่ระบบด้วย LINE
+    </button>
+    <p class="login-note">ระบบใช้บัญชี LINE เพื่อบันทึกคะแนนและความก้าวหน้าของผู้เรียน</p>
+  </div>
+</div>
+
+<!-- ==================== แอปหลัก ==================== -->
+<div id="app" class="app d-none">
+
+  <!-- ---------- ส่วนหัว : โปรไฟล์ผู้เรียน ---------- -->
+  <header class="hero">
+    <div class="hero-bg"></div>
+    <div class="container hero-content">
+
+      <div class="profile-row">
+        <div class="avatar-wrap">
+          <img id="pfPicture" class="avatar" alt="รูปโปรไฟล์">
+          <span id="pfLevelBadge" class="level-chip"><i class="fa-solid fa-seedling"></i> Lv.1</span>
+        </div>
+        <div class="profile-info">
+          <p class="hello">สวัสดี ยินดีต้อนรับ</p>
+          <h2 id="pfName">ผู้เรียน</h2>
+          <p id="pfLevelName" class="level-name"><i class="fa-solid fa-award"></i> มือใหม่หัดโค้ด</p>
+        </div>
+        <div class="profile-points">
+          <div class="pt-value" id="pfPoints">0</div>
+          <div class="pt-label">คะแนนสะสม</div>
+        </div>
+      </div>
+
+      <!-- Progress bar ไประดับถัดไป -->
+      <div class="level-progress">
+        <div class="lp-head">
+          <span id="lpCurrent">ระดับ 1</span>
+          <span id="lpNext">อีก 150 คะแนน ถึงระดับถัดไป</span>
+        </div>
+        <div class="progress lp-bar">
+          <div id="lpFill" class="progress-bar" role="progressbar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- สถิติย่อ -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon si-blue"><i class="fa-solid fa-book-open"></i></div>
+          <div class="stat-body">
+            <div class="stat-value"><span id="stLesson">0</span><small id="stLessonTotal">/9</small></div>
+            <div class="stat-label">บทเรียนสำเร็จ</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-purple"><i class="fa-solid fa-flag-checkered"></i></div>
+          <div class="stat-body">
+            <div class="stat-value"><span id="stMission">0</span><small id="stMissionTotal">/18</small></div>
+            <div class="stat-label">ภารกิจสำเร็จ</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-gold"><i class="fa-solid fa-medal"></i></div>
+          <div class="stat-body">
+            <div class="stat-value"><span id="stBadge">0</span><small id="stBadgeTotal">/15</small></div>
+            <div class="stat-label">Badge ที่ได้รับ</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-pink"><i class="fa-solid fa-ranking-star"></i></div>
+          <div class="stat-body">
+            <div class="stat-value">#<span id="stRank">-</span></div>
+            <div class="stat-label">อันดับผู้เรียน</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ---------- แท็บเมนู ---------- -->
+  <nav class="tabbar">
+    <div class="container tabbar-inner">
+      <button class="tab-btn active" data-tab="home"><i class="fa-solid fa-house"></i><span>หน้าหลัก</span></button>
+      <button class="tab-btn" data-tab="checkin"><i class="fa-solid fa-calendar-check"></i><span>เช็คอิน</span></button>
+      <button class="tab-btn" data-tab="lesson"><i class="fa-solid fa-book"></i><span>บทเรียน</span></button>
+      <button class="tab-btn" data-tab="quiz"><i class="fa-solid fa-pen-to-square"></i><span>Quiz</span></button>
+      <button class="tab-btn" data-tab="badge"><i class="fa-solid fa-medal"></i><span>Badge</span></button>
+      <button class="tab-btn" data-tab="rank"><i class="fa-solid fa-trophy"></i><span>อันดับ</span></button>
+    </div>
+  </nav>
+
+  <main class="container main-area">
+
+    <!-- ========== แท็บ : หน้าหลัก ========== -->
+    <section id="tab-home" class="tab-pane active">
+
+      <div class="row g-3">
+        <div class="col-lg-7">
+          <div class="panel">
+            <div class="panel-head">
+              <h3><i class="fa-solid fa-chart-line"></i> คะแนนย้อนหลัง 7 วัน</h3>
+            </div>
+            <div class="chart-box"><canvas id="chartPoints"></canvas></div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="panel">
+            <div class="panel-head">
+              <h3><i class="fa-solid fa-chart-pie"></i> ความแม่นยำรายหมวด</h3>
+            </div>
+            <div class="chart-box"><canvas id="chartCategory"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-0">
+        <div class="col-lg-5">
+          <div class="panel">
+            <div class="panel-head"><h3><i class="fa-solid fa-bullseye"></i> สรุปผลการเรียน</h3></div>
+            <div class="summary-list">
+              <div class="sum-item">
+                <span><i class="fa-solid fa-pen-to-square si-purple"></i> ทำแบบทดสอบแล้ว</span>
+                <strong><span id="sumQuizCount">0</span> ครั้ง</strong>
+              </div>
+              <div class="sum-item">
+                <span><i class="fa-solid fa-circle-check si-green"></i> ตอบถูกสะสม</span>
+                <strong><span id="sumCorrect">0</span> ข้อ</strong>
+              </div>
+              <div class="sum-item">
+                <span><i class="fa-solid fa-percent si-blue"></i> ความแม่นยำเฉลี่ย</span>
+                <strong><span id="sumAccuracy">0</span>%</strong>
+              </div>
+              <div class="sum-item">
+                <span><i class="fa-solid fa-calendar-check si-gold"></i> เช็คอินสะสม</span>
+                <strong><span id="sumCheckin">0</span> วัน</strong>
+              </div>
+              <div class="sum-item">
+                <span><i class="fa-solid fa-fire si-pink"></i> เช็คอินต่อเนื่องสูงสุด</span>
+                <strong><span id="sumBestStreak">0</span> วัน</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="panel">
+            <div class="panel-head"><h3><i class="fa-solid fa-clock-rotate-left"></i> กิจกรรมล่าสุด</h3></div>
+            <div id="recentList" class="recent-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mt-3 quick-panel">
+        <div class="panel-head"><h3><i class="fa-solid fa-bolt"></i> เริ่มต้นอย่างรวดเร็ว</h3></div>
+        <div class="quick-grid">
+          <button class="quick-card qc-blue" data-goto="checkin">
+            <i class="fa-solid fa-calendar-check"></i><span>เช็คอินรับคะแนน</span></button>
+          <button class="quick-card qc-purple" data-goto="lesson">
+            <i class="fa-solid fa-book-open"></i><span>อ่านบทเรียน</span></button>
+          <button class="quick-card qc-pink" data-goto="quiz">
+            <i class="fa-solid fa-pen-to-square"></i><span>ทำแบบทดสอบ</span></button>
+          <button class="quick-card qc-gold" data-goto="rank">
+            <i class="fa-solid fa-trophy"></i><span>ดูอันดับคะแนน</span></button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========== แท็บ : เช็คอิน ========== -->
+    <section id="tab-checkin" class="tab-pane">
+      <div class="row g-3">
+        <div class="col-lg-5">
+          <div class="panel checkin-panel">
+            <div class="checkin-hero">
+              <div class="ci-icon"><i class="fa-solid fa-calendar-check"></i></div>
+              <h3 id="ciTitle">เช็คอินประจำวัน</h3>
+              <p id="ciDate" class="ci-date"></p>
+              <div class="ci-streak">
+                <div class="ci-streak-item">
+                  <i class="fa-solid fa-fire"></i>
+                  <div><strong id="ciStreak">0</strong><span>วันติดต่อกัน</span></div>
+                </div>
+                <div class="ci-streak-item">
+                  <i class="fa-solid fa-calendar-days"></i>
+                  <div><strong id="ciTotal">0</strong><span>ครั้งสะสม</span></div>
+                </div>
+                <div class="ci-streak-item">
+                  <i class="fa-solid fa-crown"></i>
+                  <div><strong id="ciBest">0</strong><span>สถิติสูงสุด</span></div>
+                </div>
+              </div>
+              <button id="btnCheckin" class="btn-checkin">
+                <i class="fa-solid fa-hand-pointer"></i> เช็คอินวันนี้ รับ 10+ คะแนน
+              </button>
+              <p class="ci-note">เช็คอินต่อเนื่องยิ่งหลายวัน ยิ่งได้โบนัสเพิ่ม สูงสุด 20 คะแนน</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="panel">
+            <div class="panel-head">
+              <h3><i class="fa-solid fa-calendar-days"></i> ปฏิทินการเช็คอิน</h3>
+              <span class="panel-sub">5 สัปดาห์ล่าสุด</span>
+            </div>
+            <div id="ciCalendar" class="ci-calendar"></div>
+            <div class="ci-legend">
+              <span><i class="dot done"></i> เช็คอินแล้ว</span>
+              <span><i class="dot today"></i> วันนี้</span>
+              <span><i class="dot miss"></i> ไม่ได้เช็คอิน</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== แท็บ : บทเรียน ========== -->
+    <section id="tab-lesson" class="tab-pane">
+      <div class="section-head">
+        <h3><i class="fa-solid fa-book"></i> บทเรียนทั้งหมด</h3>
+        <p>อ่านจบแต่ละบทรับ 20 คะแนน อ้างอิงจากใบเนื้อหา หน้า 8-41</p>
+      </div>
+      <div id="lessonGrid" class="card-grid"></div>
+    </section>
+
+    <!-- ========== แท็บ : Quiz ========== -->
+    <section id="tab-quiz" class="tab-pane">
+      <div class="section-head">
+        <h3><i class="fa-solid fa-pen-to-square"></i> แบบทดสอบทบทวน</h3>
+        <p>แยกตามหมวดหมู่ หมวดละ 10 ข้อ พร้อมเฉลยและคำอธิบายเหตุผลทุกข้อ</p>
+      </div>
+      <div id="quizGrid" class="card-grid"></div>
+
+      <div class="panel mt-3">
+        <div class="panel-head"><h3><i class="fa-solid fa-clock-rotate-left"></i> ประวัติการทำแบบทดสอบ</h3></div>
+        <div class="table-responsive">
+          <table class="table quiz-history">
+            <thead><tr><th>วันที่</th><th>หมวดหมู่</th><th class="text-center">คะแนน</th><th class="text-center">ร้อยละ</th><th class="text-center">ได้รับ</th></tr></thead>
+            <tbody id="quizHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== แท็บ : Badge ========== -->
+    <section id="tab-badge" class="tab-pane">
+      <div class="section-head">
+        <h3><i class="fa-solid fa-medal"></i> เหรียญตราสะสม</h3>
+        <p>สะสมได้จากการเช็คอิน ทำแบบทดสอบ และอ่านบทเรียน</p>
+      </div>
+      <div class="badge-progress-bar">
+        <div class="bp-head">
+          <span>ความคืบหน้าการสะสม</span>
+          <strong><span id="bgEarned">0</span> / <span id="bgTotal">15</span> เหรียญ</strong>
+        </div>
+        <div class="progress"><div id="bgFill" class="progress-bar" style="width:0%"></div></div>
+      </div>
+      <div id="badgeGrid" class="badge-grid"></div>
+    </section>
+
+    <!-- ========== แท็บ : อันดับ ========== -->
+    <section id="tab-rank" class="tab-pane">
+      <div class="section-head">
+        <h3><i class="fa-solid fa-trophy"></i> อันดับคะแนนสูงสุด</h3>
+        <p>จัดอันดับจากคะแนนสะสมของผู้เรียนทั้งหมด</p>
+      </div>
+      <div id="podium" class="podium"></div>
+      <div class="panel">
+        <div id="rankList" class="rank-list"></div>
+      </div>
+      <div id="myRankBar" class="my-rank d-none"></div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p><i class="fa-brands fa-html5"></i> HTML5 Quest</p>
+    <p class="small">วิชาพื้นฐานการสร้างเว็บไซต์ (21909-1006) &middot; เรื่อง ออกแบบและสร้างเว็บไซต์ด้วยโปรแกรมภาษา HTML5</p>
+    <p class="small">พัฒนาด้วย Google Apps Script + Google Sheets + LINE LIFF &copy; 2026</p>
+  </footer>
+</div>
+
+<!-- ==================== Modal : อ่านบทเรียน ==================== -->
+<div class="modal fade" id="lessonModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content lesson-modal">
+      <div class="modal-header">
+        <div>
+          <p id="lsPages" class="ls-pages"></p>
+          <h5 id="lsTitle" class="modal-title"></h5>
+          <p id="lsObjective" class="ls-objective"></p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="lsContent"></div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+        <button id="btnLessonDone" class="btn btn-grad"><i class="fa-solid fa-check"></i> อ่านจบแล้ว รับ 20 คะแนน</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Modal : ทำแบบทดสอบ ==================== -->
+<div class="modal fade" id="quizModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content quiz-modal">
+
+      <div class="modal-header quiz-header">
+        <div class="qh-left">
+          <span id="qzCategory" class="qz-cat"></span>
+          <div class="qz-progress">
+            <span id="qzCounter">ข้อ 1 / 10</span>
+            <div class="progress"><div id="qzFill" class="progress-bar" style="width:10%"></div></div>
+          </div>
+        </div>
+        <div class="qh-right">
+          <span id="qzScore" class="qz-score"><i class="fa-solid fa-star"></i> 0</span>
+          <button type="button" class="btn-close" id="btnQuizClose"></button>
+        </div>
+      </div>
+
+      <div class="modal-body quiz-body">
+        <div id="qzQuestionBox">
+          <p id="qzQuestion" class="qz-question"></p>
+          <div id="qzChoices" class="qz-choices"></div>
+          <div id="qzFeedback" class="qz-feedback d-none">
+            <div class="fb-head"><i class="fa-solid fa-circle-info"></i> <span id="fbTitle"></span></div>
+            <p class="fb-answer">เฉลย : <strong id="fbAnswer"></strong></p>
+            <p class="fb-explain" id="fbExplain"></p>
+            <p class="fb-source" id="fbSource"></p>
+          </div>
+        </div>
+
+        <!-- หน้าสรุปผล -->
+        <div id="qzResult" class="qz-result d-none">
+          <div class="res-ring">
+            <div class="res-percent"><span id="resPercent">0</span><small>%</small></div>
+          </div>
+          <h4 id="resTitle"></h4>
+          <p id="resSub" class="res-sub"></p>
+          <div class="res-stats">
+            <div><strong id="resScore">0/10</strong><span>ตอบถูก</span></div>
+            <div><strong id="resPoints">0</strong><span>คะแนนที่ได้</span></div>
+            <div><strong id="resTime">0:00</strong><span>เวลาที่ใช้</span></div>
+          </div>
+          <div id="resReview" class="res-review"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer quiz-footer">
+        <button id="btnQuizNext" class="btn btn-grad w-100 d-none">ข้อถัดไป <i class="fa-solid fa-arrow-right"></i></button>
+        <div id="qzResultActions" class="d-none w-100 d-flex gap-2">
+          <button id="btnQuizRetry" class="btn btn-light flex-fill"><i class="fa-solid fa-rotate-right"></i> ทำอีกครั้ง</button>
+          <button id="btnQuizFinish" class="btn btn-grad flex-fill"><i class="fa-solid fa-check"></i> เสร็จสิ้น</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>
